@@ -4,131 +4,23 @@
 <meta charset="UTF-8">
 <title>Face Recognition Gallery</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 <style>
-  body {
-    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-    color: #fff;
-    font-family: 'Orbitron', sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-  }
-  h1 { color: gold; margin-bottom: 20px; }
-  #gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
-    width: 100%;
-    max-width: 1200px;
-  }
-  .card {
-    background: linear-gradient(145deg, #222, #111);
-    border: 2px solid silver;
-    border-radius: 15px;
-    text-align: center;
-    padding: 10px;
-    transition: transform 0.3s;
-  }
-  .card:hover { transform: scale(1.05); border-color: gold; }
-  .card img { width: 100%; border-radius: 10px; }
-  button {
-    margin-top: 5px;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 8px;
-    background: gold;
-    color: black;
-    cursor: pointer;
-    font-family: 'Orbitron', sans-serif;
-    transition: all 0.3s;
-  }
-  button:hover { background: silver; color: black; }
-</style>
-</head>
-<body>
-<h1>Face Recognition Gallery</h1>
-<div id="gallery"></div>
-
-<script>
-// All 133 image links
-const images = [
-{"name":"Photo 1","url":"https://drive.google.com/uc?export=view&id=1dTjdmQeqFhzaju0wA8FiyaGA1ymSfD3o"},
-{"name":"Photo 2","url":"https://drive.google.com/uc?export=view&id=16imztI5Nk2ZNx-9ig7GfkSjaoJnkmKci"},
-{"name":"Photo 3","url":"https://drive.google.com/uc?export=view&id=1k5sOKyZSe1GH7jc7svIFj9iL6CSzSBVz"},
-{"name":"Photo 4","url":"https://drive.google.com/uc?export=view&id=1jgtuBoxEcjR7EddLNXNxSuJUNp9qIbmw"},
-{"name":"Photo 5","url":"https://drive.google.com/uc?export=view&id=1Jd23lF89myK1LyPzGSC2wjr5Sqe526qB"},
-{"name":"Photo 6","url":"https://drive.google.com/uc?export=view&id=1TMtPK57PrKpwfb422cXSGSv9nVx25f43"},
-{"name":"Photo 7","url":"https://drive.google.com/uc?export=view&id=1J92CkPA3sRejIsM1fCp-W1Vowq85xgxd"},
-{"name":"Photo 8","url":"https://drive.google.com/uc?export=view&id=1qpqL1429nbUeKZRfwHR3Ky7FZsWLF7FZ"},
-{"name":"Photo 9","url":"https://drive.google.com/uc?export=view&id=1X-5-gJyuBVvgqFf3xNZLaI4iF6qhMR84"},
-{"name":"Photo 10","url":"https://drive.google.com/uc?export=view&id=1eEiVIpJMlsVlg9nzrH5oTZMf4PCuKAD9"},
-{"name":"Photo 11","url":"https://drive.google.com/uc?export=view&id=1oLKF4KjWTWEbNdHw7tCAGwzpvTUlxgqc"},
-{"name":"Photo 12","url":"https://drive.google.com/uc?export=view&id=1oTpTjzWAMHjCYb4Gt7G7iAB-2TbNDoiV"},
-{"name":"Photo 13","url":"https://drive.google.com/uc?export=view&id=14piuuMEFMWMTI0l0CA08335O8SKUl4Jp"},
-{"name":"Photo 14","url":"https://drive.google.com/uc?export=view&id=17p3flv_LaaaoS8KNy1U8QGmqs5kmqsUJ"},
-{"name":"Photo 15","url":"https://drive.google.com/uc?export=view&id=16A4qKkurTNgu_b7s6YjPcJdguMnNyr-q"},
-{"name":"Photo 16","url":"https://drive.google.com/uc?export=view&id=19Wy9rDlh6KhVFeOeXS8_SJJAVVOfMAvz"},
-{"name":"Photo 17","url":"https://drive.google.com/uc?export=view&id=1-AUR91v_9c1RqzuEYejUVkuqAe3yvHoO"},
-{"name":"Photo 18","url":"https://drive.google.com/uc?export=view&id=1rnaWKv7dG1cI8C606Vdyn-PKeNlQvYiq"},
-{"name":"Photo 19","url":"https://drive.google.com/uc?export=view&id=1KqSIOZHr5ajAkyEGtJ41b6b81CXL3Ihe"},
-{"name":"Photo 20","url":"https://drive.google.com/uc?export=view&id=1nmYddZtMZ5JvKwVhRtk-UEJ9dDbnPMx7"},
-{"name":"Photo 21","url":"https://drive.google.com/uc?export=view&id=1QjOxDbqE7JUAMzf3FrtKtCN9zhhTKmPT"},
-{"name":"Photo 22","url":"https://drive.google.com/uc?export=view&id=1tlUSB3qyvSTFu9AOxVp3FDFDnORS5DOC"},
-{"name":"Photo 23","url":"https://drive.google.com/uc?export=view&id=1AJJIeezGRm5k1YST4qjLjPGUNnpWb_XO"},
-{"name":"Photo 24","url":"https://drive.google.com/uc?export=view&id=1hapXnqT26KS09cbCvFtI4xuX_8cb6Ras"},
-{"name":"Photo 25","url":"https://drive.google.com/uc?export=view&id=1t7gwoZYWdmt-aeZqUd1M540I9uddELo5"},
-{"name":"Photo 26","url":"https://drive.google.com/uc?export=view&id=1wGl1jvoB0mQz2vFuiMvF1ZV4PqidsG0I"},
-{"name":"Photo 27","url":"https://drive.google.com/uc?export=view&id=1IN6ykZ5zq8x3XA8CrAdIcIdaRgVqq6nN"},
-{"name":"Photo 28","url":"https://drive.google.com/uc?export=view&id=1BRpm4Iw4GImlhAs7UC1N9dOrPtZa9TMV"},
-{"name":"Photo 29","url":"https://drive.google.com/uc?export=view&id=1f8tLTQESuCXCtKmEe8xtQrr37dP9X2oi"},
-{"name":"Photo 30","url":"https://drive.google.com/uc?export=view&id=1d_XmT2jEfSGEAGB8QQHyTTICaS4wVY1X"},
-{"name":"Photo 31","url":"https://drive.google.com/uc?export=view&id=1OYbuPZU_MvN6vXRkpQY11KeB2xu5RR-E"},
-{"name":"Photo 32","url":"https://drive.google.com/uc?export=view&id=1_HpPKHzG9axp5V16StpvTcUrOKQN8lyd"},
-{"name":"Photo 33","url":"https://drive.google.com/uc?export=view&id=14YPoba4YXCORbmI00PnNl5XSa28cwFGk"},
-{"name":"Photo 34","url":"https://drive.google.com/uc?export=view&id=1mb49iFAtVvUYm9iHKPv1C6Zx308MXddq"},
-{"name":"Photo 35","url":"https://drive.google.com/uc?export=view&id=1QgtToRVlITgUQSb5fGX8_MIeocNurhjT"},
-{"name":"Photo 36","url":"https://drive.google.com/uc?export=view&id=1n8JMLhDvIitah6fui6ugp4-jUs_-gOkZ"},
-{"name":"Photo 37","url":"https://drive.google.com/uc?export=view&id=1JWAlQjhogd0VU_8WJ--86KFgVB8kRgR2"},
-{"name":"Photo 38","url":"https://drive.google.com/uc?export=view&id=11B1A5JOSiJ6ZQiyHM3kCNTEKjMpZaLFc"},
-{"name":"Photo 39","url":"https://drive.google.com/uc?export=view&id=1S77zlOp0FgaKvNY5iGIjUy9wft5vVNFu"},
-{"name":"Photo 40","url":"https://drive.google.com/uc?export=view&id=1isKErUbpnwjLBNJybde8KQ27gXRsS2FK"},
-{"name":"Photo 41","url":"https://drive.google.com/uc?export=view&id=1nBETmfPQGX3zBamV8d7qJq67DHuDZFTa"},
-{"name":"Photo 42","url":"https://drive.google.com/uc?export=view&id=1zLBdwpkEJS7TMSV_vN6mlxrCEfPyy6W1"},
-{"name":"Photo 43","url":"https://drive.google.com/uc?export=view&id=1xo4wGifEZAQf4q5jqaaQkktLaRCCbSHg"},
-{"name":"Photo 44","url":"https://drive.google.com/uc?export=view&id=1KR5Y0bWRYPfgM48ZomXaP8olXFSFtCrP"},
-{"name":"Photo 45","url":"https://drive.google.com/uc?export=view&id=1GLJG6zbXOhX5pe1OQBxr8mDm0qJ2ERfr"},
-{"name":"Photo 46","url":"https://drive.google.com/uc?export=view&id=1H6bSjcBSbQAaO9JOCeHBmX79z6w89mpx"},
-{"name":"Photo 47","url":"https://drive.google.com/uc?export=view&id=1Vlms0bHpazXGifj4pn3v-ThyaqKa7FnK"},
-{"name":"Photo 48","url":"https://drive.google.com/uc?export=view&id=1UXqxSgFuvWCWVpeE1SnvOZeHqaZZ5F2X"},
-{"name":"Photo 49","url":"https://drive.google.com/uc?export=view&id=1BcbfhU36wh0O88FIjwNvAHixm7TKhzm2"},
-{"name":"Photo 50","url":"https://drive.google.com/uc?export=view&id=1rVZVPquxWILxACyWI1th6YbxnzdC9AjN"}
-// Continue adding all remaining images here (Photo 51 to Photo 133) in same format
-];
-
-const gallery = document.getElementById('gallery');
-images.forEach(img => {
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
-    <img src="${img.url}" alt="${img.name}" />
-    <div>${img.name}</div>
-    <button onclick="downloadPhoto('${img.url}')">Download</button>
-    <button onclick="requestEdit('${img.name}')">Request Edit</button>
-  `;
-  gallery.appendChild(card);
-});
-
-function downloadPhoto(url) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = url.split('/').pop();
-  a.click();
+body {
+  background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
 }
-
-function requestEdit(name) {
-  window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=Edit Request&body=Please edit the photo: ${name}`;
-}
-</script>
-</body>
-</html>
+h1 { color: gold; margin-bottom: 20px; }
+#videoContainer { position: relative; margin-bottom: 20px; }
+#video { border: 3px solid silver; border-radius: 15px; }
+#gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 120
