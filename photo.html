@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Futuristic Gold & Silver Face Recognition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body {
+  margin:0;
+  padding:20px;
+  font-family:'Poppins',sans-serif;
+  background: linear-gradient(145deg,#1c1c1c,#2c2c2c);
+  color:#fff;
+}
+h2 {
+  font-family:'Orbitron',sans-serif;
+  font-weight:700;
+  font-size:2rem;
+  text-align:center;
+  margin-bottom:30px;
+  background: linear-gradient(90deg,#FFD700,#C0C0C0);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:0 0 10px #FFD700,0 0 20px #C0C0C0;
+}
+#controls {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:center;
+  margin-bottom:20px;
+}
+#controls button,#controls input[type="number"],#controls input[type="file"] {
+  padding:12px 20px;
+  border-radius:14px;
+  border:none;
+  font-weight:700;
+  font-size:1rem;
+  cursor:pointer;
+  transition:0.3s;
+  background: linear-gradient(145deg,#FFD700 0%,#C0C0C0 100%);
+  color:#1c1c1c;
+  box-shadow:0 4px 15px rgba(255,215,0,0.5),0 0 10px rgba(192,192,192,0.5) inset;
+  backdrop-filter:blur(4px);
+}
+#controls button:hover,#captureBtn:hover,#searchBtn:hover{
+  transform:scale(1.05);
+  background:linear-gradient(145deg,#FFFACD,#E6E8FA);
+  box-shadow:0 0 25px #FFD700,0 0 25px #C0C0C0 inset;
+}
+#controls input[type="number"],#controls input[type="file"]{
+  width:80px;
+  background:rgba(255,215,0,0.15);
+  color:#FFD700;
+  box-shadow:0 0 10px #FFD700 inset;
+}
+label{font-weight:600;color:#FFD700;}
+#status{
+  text-align:center;
+  margin-bottom:16px;
+  font-family:'Orbitron',sans-serif;
+  font-size:1rem;
+  background: linear-gradient(90deg,#FFD700,#C0C0C0);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:0 0 8px #FFD700,0 0 12px #C0C0C0;
+}
+.video-container,.input-container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+}
+video,canvas,img.preview{
+  border-radius:16px;
+  border:3px solid #FFD700;
+  box-shadow:0 0 25px #FFD700,0 0 15px #C0C0C0 inset;
+}
+#captureBtn,#searchBtn{
+  padding:12px 22px;
+  border-radius:14px;
+  border:none;
+  font-family:'Orbitron',sans-serif;
+  font-weight:700;
+  font-size:1rem;
+  color:#1c1c1c;
+  background:linear-gradient(145deg,#FFD700 0%,#C0C0C0 100%);
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 4px 15px rgba(255,215,0,0.7),0 0 10px rgba(192,192,192,0.5) inset;
+}
+button:disabled{opacity:0.5;cursor:not-allowed;}
+#matches{
+  display:flex;
+  flex-wrap:wrap;
+  gap:18px;
+  justify-content:center;
+  margin-top:25px;
+}
+.match{
+  width:190px;
+  background:linear-gradient(145deg,rgba(255,215,0,0.1),rgba(192,192,192,0.1));
+  border-radius:16px;
+  padding:12px;
+  text-align:center;
+  backdrop-filter:blur(12px);
+  box-shadow:0 0 20px #FFD700,0 0 15px #C0C0C0 inset;
+  transition:0.3s;
+}
+.match:hover{
+  transform:translateY(-6px);
+  box-shadow:0 0 35px #FFD700,0 0 30px #C0C0C0 inset;
+}
+.match img{
+  width:170px;
+  height:120px;
+  border-radius:12px;
+  border:2px solid #FFD700;
+  object-fit:cover;
+}
+.small{font-size:0.8rem;color:#FFD700;}
+.match-buttons{
+  margin-top:6px;
+  display:flex;
+  justify-content:center;
+  gap:8px;
+}
+.match-buttons button{
+  padding:6px 12px;
+  font-size:0.85rem;
+  border-radius:10px;
+  border:none;
+  font-weight:600;
+  color:#1c1c1c;
+  background:linear-gradient(145deg,#FFD700 0%,#C0C0C0 100%);
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 3px 10px rgba(255,215,0,0.5),0 0 5px rgba(192,192,192,0.5) inset;
+}
+.match-buttons button:hover{
+  transform:scale(1.05);
+  background:linear-gradient(145deg,#FFFACD,#E6E8FA);
+  box-shadow:0 0 20px #FFD700,0 0 15px #C0C0C0 inset;
+}
+</style>
+</head>
+<body>
+<h2>Futuristic Gold & Silver Face Recognition</h2>
+
+<div id="controls">
+  <button id="loadBtn">Load Models & Index</button>
+  <button id="useWebcamBtn" disabled>Use Webcam</button>
+  <input id="fileInput" type="file" accept="image/*"/>
+  <label class="small">Max matches:<input id="maxMatches" type="number" value="5" min="1" max="20"/></label>
+  <label class="small">Distance cutoff:<input id="distanceCutoff" type="number" value="0.8" step="0.01" min="0.3" max="1.2"/></label>
+</div>
+
+<div id="status">Status: idle</div>
+
+<div style="display:flex; flex-wrap: wrap; gap:24px; justify-content:center;">
+  <div class="video-container">
+    <video id="video" width="320" height="240" autoplay muted playsinline style="display:none;"></video>
+    <canvas id="captureCanvas" width="320" height="240" style="display:none;"></canvas>
+    <button id="captureBtn" disabled>Capture from Webcam</button>
+  </div>
+
+  <div class="input-container">
+    <div><label>Uploaded / captured image:</label></div>
+    <img id="inputPreview" class="preview" src="" alt="input preview"/>
+    <button id="searchBtn" disabled>Find Matches</button>
+  </div>
+</div>
+
+<div id="matches"></div>
+
+<script src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+// --- Drive Images ---
+const imageUrls=[
+  "https://drive.google.com/uc?export=view&id=1dTjdmQeqFhzaju0wA8FiyaGA1ymSfD3o",
+  "https://drive.google.com/uc?export=view&id=16imztI5Nk2ZNx-9ig7GfkSjaoJnkmKci"
+  // Add all your image links here
+];
+// ----------------
+
+let labeledDescriptors=[],modelsLoaded=false,stream=null;
+const statusEl=document.getElementById('status');
+const loadBtn=document.getElementById('loadBtn');
+const useWebcamBtn=document.getElementById('useWebcamBtn');
+const fileInput=document.getElementById('fileInput');
+const inputPreview=document.getElementById('inputPreview');
+const searchBtn=document.getElementById('searchBtn');
+const captureBtn=document.getElementById('captureBtn');
+const videoEl=document.getElementById('video');
+const canvasEl=document.getElementById('captureCanvas');
+const matchesEl=document.getElementById('matches');
+const maxMatchesEl=document.getElementById('maxMatches');
+const distanceCutoffEl=document.getElementById('distanceCutoff');
+
+function setStatus(msg){statusEl.textContent='Status: '+msg;console.log(msg);}
+async function loadModels(){
+  setStatus('Loading models...');
+  const MODEL_URL='https://justadudewhohacks.github.io/face-api.js/models';
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+  modelsLoaded=true;
+  setStatus('Models loaded.');
+}
+async function descriptorFromImage(imgEl){
+  const options=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5});
+  const detection=await faceapi.detectSingleFace(imgEl,options).withFaceLandmarks().withFaceDescriptor();
+  return detection?.descriptor??null;
+}
+async function indexImages(){
+  if(!modelsLoaded){setStatus('Models not loaded');return;}
+  setStatus(`Indexing ${imageUrls.length} images...`);
+  labeledDescriptors=[];
+  for(const url of imageUrls){
+    try{
+      const img=new Image();
+      img.crossOrigin='anonymous';
+      await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+      const desc=await descriptorFromImage(img);
+      if(desc){labeledDescriptors.push({name:url.split('/').pop(),url,descriptor:desc});setStatus(`Indexed ${labeledDescriptors.length}/${imageUrls.length}`);}
+      else{setStatus(`No face detected, skipping ${url}`);}
+    }catch(e){console.warn('Error loading',url,e);}
+  }
+  setStatus(`Indexing done: ${labeledDescriptors.length} faces.`);
+  useWebcamBtn.disabled=false; searchBtn.disabled=false; captureBtn.disabled=false;
+}
+function euclideanDistance(a,b){let sum=0;for(let i=0;i<a.length;i++){let d=a[i]-b[i];sum+=d*d;}return Math.sqrt(sum);}
+function findMatches(queryDesc,maxMatches=5,distCutoff=0.8){
+  const results=[];
+  for(const item of labeledDescriptors){const d=euclideanDistance(queryDesc,item.descriptor);if(d<=distCutoff)results.push({name:item.name,url:item.url,distance:d});}
+  results.sort((a,b)=>a.distance-b.distance);
+  return results.slice(0,maxMatches);
+}
+async function processInputImage(url){
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+  inputPreview.src=url;
+  if(!modelsLoaded){setStatus('Models not loaded');return;}
+  setStatus('Detecting face...');
+  const desc=await descriptorFromImage(img);
+  if(!desc){setStatus('No face detected');return;}
+  setStatus('Finding matches...');
+  const results=findMatches(desc,parseInt(maxMatchesEl.value,10),parseFloat(distanceCutoffEl.value));
+  displayMatches(results);
+}
+function displayMatches(results){
+  matchesEl.innerHTML='';
+  if(!results.length){matchesEl.innerHTML='<div class="small">No matches found within cutoff distance.</div>'; setStatus('No matches found.');return;}
+  for(const r of results){
+    const div=document.createElement('div'); div.className='match';
+    const img=document.createElement('img'); img.src=r.url; img.className='preview'; img.alt=r.name;
+    const caption=document.createElement('div'); caption.innerHTML=`${r.name}<br/><span class="small">dist: ${r.distance.toFixed(4)}</span>`;
+    const btnContainer=document.createElement('div'); btnContainer.className='match-buttons';
+    const downloadBtn=document.createElement('button'); downloadBtn.textContent='Download'; downloadBtn.addEventListener('click',()=>{const a=document.createElement('a');a.href=r.url;a.download=r.name+'.jpg';a.click();});
+    const emailBtn=document.createElement('button'); emailBtn.textContent='Request Edit'; emailBtn.addEventListener('click',()=>{const subject=encodeURIComponent('Photo Edit Request');const body=encodeURIComponent(`Hello Darren,\n\nI would like this photo edited:\n${r.url}\n\nThank you.`);window.location.href=`mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;});
+    btnContainer.appendChild(downloadBtn); btnContainer.appendChild(emailBtn);
+    div.appendChild(img); div.appendChild(caption); div.appendChild(btnContainer);
+    matchesEl.appendChild(div);
+  }
+  setStatus(`Found ${results.length} match(es).`);
+}
+// --- Events ---
+loadBtn.addEventListener('click',async()=>{loadBtn.disabled=true; await loadModels(); await indexImages(); loadBtn.disabled=false;});
+fileInput.addEventListener('change',async(e)=>{const f=e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);await processInputImage(url);});
+useWebcamBtn.addEventListener('click',async()=>{
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;videoEl.style.display='none'; useWebcamBtn.textContent='Use Webcam'; captureBtn.disabled=true; setStatus('Webcam stopped.');return;}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}});videoEl.srcObject=stream;videoEl.style.display='block'; useWebcamBtn.textContent='Stop Webcam'; captureBtn.disabled=false; setStatus('Webcam running. Click Capture.');}catch(err){console.error(err);setStatus('Webcam access denied or unavailable.');}
+});
+captureBtn.addEventListener('click',async()=>{if(!stream){setStatus('Webcam not running');return;}const ctx=canvasEl.getContext('2d');canvasEl.width=videoEl.videoWidth; canvasEl.height=videoEl.videoHeight; ctx.drawImage(videoEl,0,0,canvasEl.width,canvasEl.height); const dataUrl=canvasEl.toDataURL('image/jpeg'); await processInputImage(dataUrl);});
+</script>
+</body>
+</html>
