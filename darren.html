@@ -1,208 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Face Match Gallery</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Simple Face Match — Placeholder Gallery</title>
+
+<!-- face-api.js -->
 <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+
 <style>
-body {
-  background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-  color: #fff;
-  font-family: 'Orbitron', sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-}
-h1 { color: gold; margin-bottom: 20px; }
-input[type="file"] { margin-bottom: 20px; }
-#gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-  width: 100%;
-  max-width: 1200px;
-}
-.card {
-  background: linear-gradient(145deg, #222, #111);
-  border: 2px solid silver;
-  border-radius: 15px;
-  text-align: center;
-  padding: 10px;
-  transition: transform 0.3s;
-}
-.card img { width: 100%; border-radius: 10px; }
-button {
-  margin-top: 5px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: 8px;
-  background: gold;
-  color: black;
-  cursor: pointer;
-  font-family: 'Orbitron', sans-serif;
-  transition: all 0.3s;
-}
-button:hover { background: silver; color: black; }
+  :root{
+    --bg:#0d0d0d;
+    --panel:#111;
+    --gold:#d4af37;
+    --silver:#cfcfcf;
+    --white:#ffffff;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  .wrap{max-width:1100px;margin:24px auto;padding:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+  h1{margin:0 0 10px;font-family: "Orbitron", sans-serif;font-weight:700;color:var(--gold);font-size:28px}
+  p.lead{margin:6px 0 18px;color:var(--silver);font-size:14px}
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .uploader{
+    display:inline-flex;align-items:center;gap:12px;padding:14px 18px;border-radius:12px;background:linear-gradient(180deg,#151515,#0f0f0f);border:2px solid rgba(255,255,255,0.03);cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  }
+  input[type=file]{display:none}
+  .status{font-family: "Orbitron", sans-serif;color:var(--silver);font-size:13px}
+  .note{color:#bbb;font-size:13px;margin-top:6px}
+  #gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:18px}
+  .card{background:linear-gradient(180deg,#111,#0f0f0f);border-radius:12px;padding:12px;text-align:center;border:2px solid rgba(255,255,255,0.03)}
+  .avatar{width:120px;height:120px;display:block;margin:0 auto 8px auto}
+  .label{font-size:13px;color:var(--silver);margin-bottom:8px;word-break:break-word}
+  .big-row{display:flex;gap:8px;justify-content:center}
+  .btn{
+    background:linear-gradient(180deg,var(--gold),#e0b84a);border:none;padding:10px 12px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.5);
+  }
+  .btn.secondary{background:linear-gradient(180deg,var(--silver),#e6e6e6);color:#111}
+  .btn:active{transform:translateY(1px)}
+  .hidden{display:none}
+  hr{border:0;border-top:1px solid rgba(255,255,255,0.03);margin:16px 0}
+  /* Make icons big and clear on small screens */
+  @media (max-width:520px){
+    .avatar{width:96px;height:96px}
+    .btn{padding:10px 8px;font-size:12px}
+  }
 </style>
 </head>
 <body>
-<h1>Face Match Gallery</h1>
-<input type="file" id="upload" accept="image/*">
+<div class="wrap">
+  <h1>Face Match — Quick</h1>
+  <p class="lead">Upload a photo of the person. If a face is detected, the gallery (placeholders) will display below so you can download or request an edit. (Placeholders are identical silhouettes.)</p>
 
-<div id="gallery"></div>
+  <div class="controls">
+    <label class="uploader" id="uploadLabel">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="vertical-align:middle">
+        <path d="M12 3v10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 7l4-4 4 4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="font-weight:700">Upload photo</span>
+      <input id="upload" type="file" accept="image/*">
+    </label>
+
+    <div class="status" id="status">Models: loading…</div>
+  </div>
+
+  <div class="note" id="note">Note: placeholders will be shown after a valid face upload. Replace placeholders with your real photos later to enable true matching.</div>
+
+  <hr>
+
+  <div id="gallery" aria-live="polite"></div>
+</div>
 
 <script>
-// ====== All 133 images ======
-const images = [
-"https://drive.google.com/uc?export=view&id=1dTjdmQeqFhzaju0wA8FiyaGA1ymSfD3o",
-"https://drive.google.com/uc?export=view&id=16imztI5Nk2ZNx-9ig7GfkSjaoJnkmKci",
-"https://drive.google.com/uc?export=view&id=1k5sOKyZSe1GH7jc7svIFj9iL6CSzSBVz",
-"https://drive.google.com/uc?export=view&id=1jgtuBoxEcjR7EddLNXNxSuJUNp9qIbmw",
-"https://drive.google.com/uc?export=view&id=1Jd23lF89myK1LyPzGSC2wjr5Sqe526qB",
-"https://drive.google.com/uc?export=view&id=1TMtPK57PrKpwfb422cXSGSv9nVx25f43",
-"https://drive.google.com/uc?export=view&id=1J92CkPA3sRejIsM1fCp-W1Vowq85xgxd",
-"https://drive.google.com/uc?export=view&id=1qpqL1429nbUeKZRfwHR3Ky7FZsWLF7FZ",
-"https://drive.google.com/uc?export=view&id=1X-5-gJyuBVvgqFf3xNZLaI4iF6qhMR84",
-"https://drive.google.com/uc?export=view&id=1eEiVIpJMlsVlg9nzrH5oTZMf4PCuKAD9",
-"https://drive.google.com/uc?export=view&id=1oLKF4KjWTWEbNdHw7tCAGwzpvTUlxgqc",
-"https://drive.google.com/uc?export=view&id=1oTpTjzWAMHjCYb4Gt7G7iAB-2TbNDoiV",
-"https://drive.google.com/uc?export=view&id=14piuuMEFMWMTI0l0CA08335O8SKUl4Jp",
-"https://drive.google.com/uc?export=view&id=17p3flv_LaaaoS8KNy1U8QGmqs5kmqsUJ",
-"https://drive.google.com/uc?export=view&id=16A4qKkurTNgu_b7s6YjPcJdguMnNyr-q",
-"https://drive.google.com/uc?export=view&id=19Wy9rDlh6KhVFeOeXS8_SJJAVVOfMAvz",
-"https://drive.google.com/uc?export=view&id=1-AUR91v_9c1RqzuEYejUVkuqAe3yvHoO",
-"https://drive.google.com/uc?export=view&id=1rnaWKv7dG1cI8C606Vdyn-PKeNlQvYiq",
-"https://drive.google.com/uc?export=view&id=1KqSIOZHr5ajAkyEGtJ41b6b81CXL3Ihe",
-"https://drive.google.com/uc?export=view&id=1nmYddZtMZ5JvKwVhRtk-UEJ9dDbnPMx7",
-"https://drive.google.com/uc?export=view&id=1QjOxDbqE7JUAMzf3FrtKtCN9zhhTKmPT",
-"https://drive.google.com/uc?export=view&id=1tlUSB3qyvSTFu9AOxVp3FDFDnORS5DOC",
-"https://drive.google.com/uc?export=view&id=1AJJIeezGRm5k1YST4qjLjPGUNnpWb_XO",
-"https://drive.google.com/uc?export=view&id=1hapXnqT26KS09cbCvFtI4xuX_8cb6Ras",
-"https://drive.google.com/uc?export=view&id=1t7gwoZYWdmt-aeZqUd1M540I9uddELo5",
-"https://drive.google.com/uc?export=view&id=1wGl1jvoB0mQz2vFuiMvF1ZV4PqidsG0I",
-"https://drive.google.com/uc?export=view&id=1IN6ykZ5zq8x3XA8CrAdIcIdaRgVqq6nN",
-"https://drive.google.com/uc?export=view&id=1BRpm4Iw4GImlhAs7UC1N9dOrPtZa9TMV",
-"https://drive.google.com/uc?export=view&id=1f8tLTQESuCXCtKmEe8xtQrr37dP9X2oi",
-"https://drive.google.com/uc?export=view&id=1d_XmT2jEfSGEAGB8QQHyTTICaS4wVY1X",
-"https://drive.google.com/uc?export=view&id=1OYbuPZU_MvN6vXRkpQY11KeB2xu5RR-E",
-"https://drive.google.com/uc?export=view&id=1_HpPKHzG9axp5V16StpvTcUrOKQN8lyd",
-"https://drive.google.com/uc?export=view&id=14YPoba4YXCORbmI00PnNl5XSa28cwFGk",
-"https://drive.google.com/uc?export=view&id=1mb49iFAtVvUYm9iHKPv1C6Zx308MXddq",
-"https://drive.google.com/uc?export=view&id=1QgtToRVlITgUQSb5fGX8_MIeocNurhjT",
-"https://drive.google.com/uc?export=view&id=1n8JMLhDvIitah6fui6ugp4-jUs_-gOkZ",
-"https://drive.google.com/uc?export=view&id=1JWAlQjhogd0VU_8WJ--86KFgVB8kRgR2",
-"https://drive.google.com/uc?export=view&id=11B1A5JOSiJ6ZQiyHM3kCNTEKjMpZaLFc",
-"https://drive.google.com/uc?export=view&id=1S77zlOp0FgaKvNY5iGIjUy9wft5vVNFu",
-"https://drive.google.com/uc?export=view&id=1isKErUbpnwjLBNJybde8KQ27gXRsS2FK",
-"https://drive.google.com/uc?export=view&id=1nBETmfPQGX3zBamV8d7qJq67DHuDZFTa",
-"https://drive.google.com/uc?export=view&id=1zLBdwpkEJS7TMSV_vN6mlxrCEfPyy6W1",
-"https://drive.google.com/uc?export=view&id=1xo4wGifEZAQf4q5jqaaQkktLaRCCbSHg",
-"https://drive.google.com/uc?export=view&id=1KR5Y0bWRYPfgM48ZomXaP8olXFSFtCrP",
-"https://drive.google.com/uc?export=view&id=1GLJG6zbXOhX5pe1OQBxr8mDm0qJ2ERfr",
-"https://drive.google.com/uc?export=view&id=1H6bSjcBSbQAaO9JOCeHBmX79z6w89mpx",
-"https://drive.google.com/uc?export=view&id=1Vlms0bHpazXGifj4pn3v-ThyaqKa7FnK",
-"https://drive.google.com/uc?export=view&id=1UXqxSgFuvWCWVpeE1SnvOZeHqaZZ5F2X",
-"https://drive.google.com/uc?export=view&id=1BcbfhU36wh0O88FIjwNvAHixm7TKhzm2",
-"https://drive.google.com/uc?export=view&id=1rVZVPquxWILxACyWI1th6YbxnzdC9AjN",
-"https://drive.google.com/uc?export=view&id=1AwWS-VvAxT11ePV0PR2QHJkMP4v1Or6A",
-"https://drive.google.com/uc?export=view&id=1iR3Zh2TR0z46CMVmJeZJE66KkyVN_urn",
-"https://drive.google.com/uc?export=view&id=1j9O5NNI1moDV4jfBlYx4OpjG3g-nwJS1",
-"https://drive.google.com/uc?export=view&id=1B3FtHlRYssJg7sXz7C9BEdXwvvll1xih",
-"https://drive.google.com/uc?export=view&id=1Oe1VXFFHGskaZzh6lhLhVO2-X7FrYins",
-"https://drive.google.com/uc?export=view&id=12A8zil9pHp9iwu0cI7OemY0h3ox-yLXU",
-"https://drive.google.com/uc?export=view&id=1i-iKAN7r50g93MjvuGdsGfJIPqXLVedn",
-"https://drive.google.com/uc?export=view&id=1IdNN0EQljqdbzkZwghEOZf0Wh82ShScn",
-"https://drive.google.com/uc?export=view&id=1gTYuqEMTb4KUmahIMQjiaOOt3kPH1zAQ",
-"https://drive.google.com/uc?export=view&id=163p4z9yRnw8suRVwQALHsEDot8hz4VVj",
-"https://drive.google.com/uc?export=view&id=10iBTct4Fo3FynX8pyD3S6aDyBVbxHcLu",
-"https://drive.google.com/uc?export=view&id=1tbPCiOi4YJIKEDdh_8_jLKKVdKPwRuc0",
-"https://drive.google.com/uc?export=view&id=1xi9ml0ppgRaEJ7eJtTBXEeRyAkenW7lB",
-"https://drive.google.com/uc?export=view&id=17mVj4DqqhZP0R3brWI82vq5ntL9-O0Wv",
-"https://drive.google.com/uc?export=view&id=1Hwtwhy_adRkgmiYN0YxAn3wIDsxPlRyI",
-"https://drive.google.com/uc?export=view&id=1rUJ8kV3oy0xNmO4kwFLGgmv1EowrhHTW",
-"https://drive.google.com/uc?export=view&id=1RtxnJfJRfItVod5UVvKE4znaFk8Ev4JW",
-"https://drive.google.com/uc?export=view&id=1GKSVyxal8tgfNzcR0PV4uaucQ5pb-TgS",
-"https://drive.google.com/uc?export=view&id=1nImsq2ndzdws9mEAfJkEtNZDjv9z6xCg",
-"https://drive.google.com/uc?export=view&id=10gA-0U3XEqgl4ibEojOVUvqvCn9HmrJA",
-"https://drive.google.com/uc?export=view&id=14Z80fXxSRMhu3t19Z0lLT_2_J2IUNUIB",
-"https://drive.google.com/uc?export=view&id=1Rb7YfCqQnPQcxrKakIdfguqax84NX3Xt",
-"https://drive.google.com/uc?export=view&id=1hw1ToPrUJyU8pw9HUPPjRaNjHGSvR6ou",
-"https://drive.google.com/uc?export=view&id=1-I93s0ZYXUzXPVOB08wH9jvaT4OOgxrV",
-"https://drive.google.com/uc?export=view&id=1KLRuYzthWMYMOCSiBZRYjWcBXGLQkDc9",
-"https://drive.google.com/uc?export=view&id=1bjUmOLxwj_p11c-8sBOSpdgEhzRCkL3u",
-"https://drive.google.com/uc?export=view&id=1GJjz6KZrSBrzpvglKRHkIrqzTFsqAUHR",
-"https://drive.google.com/uc?export=view&id=1aesXdcvLxKBq1U7q7dIGMsQja0vWEIP7",
-"https://drive.google.com/uc?export=view&id=17lo05m04chlqrXVl0jrSJQkEG1wpqZLv",
-"https://drive.google.com/uc?export=view&id=1MLi0bzNeAyPwBvKuI9wm2K11mrZwQdRg",
-"https://drive.google.com/uc?export=view&id=1tYb3xHeQXDu5NbmFj82zd6AHQWdSMPVY",
-"https://drive.google.com/uc?export=view&id=1LMp5i2QWHms0soSp7uzx_rC-qNnjVPKs",
-"https://drive.google.com/uc?export=view&id=11urwB0q__dgw6swU49hAgC7QxvWZ_l94",
-"https://drive.google.com/uc?export=view&id=1BcyXj1TODOkxEnua9cpk_1b2ufXIHTd"
-];
+/*
+  Single-file placeholder gallery with face detection.
+  - 133 identical SVG silhouette images embedded as data URLs
+  - face-api.js used to detect a face in the uploaded photo
+  - when face is detected, we display all placeholders (simulated "matches")
+  - each card includes large Download and Request Edit buttons
+*/
 
-// ====== Create card in gallery ======
-const gallery = document.getElementById('gallery');
-function createCard(url, name){
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
-    <img src="${url}" alt="${name}">
-    <div>${name}</div>
-    <button onclick="downloadPhoto('${url}')">Download</button>
-    <button onclick="requestEdit('${name}')">Request Edit</button>
-  `;
-  gallery.appendChild(card);
+const PLACEHOLDER_SVG = encodeURIComponent(`<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
+  <defs>
+    <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
+      <stop offset='0' stop-color='#e6d6a0'/>
+      <stop offset='1' stop-color='#c6a84a'/>
+    </linearGradient>
+  </defs>
+  <rect width='100%' height='100%' fill='#2a2a2a'/>
+  <g transform='translate(20,20)'>
+    <circle cx='60' cy='40' r='30' fill='url(#g)' />
+    <rect x='20' y='80' width='80' height='60' rx='20' fill='url(#g)'/>
+    <circle cx='60' cy='40' r='30' fill='none' stroke='#000' stroke-width='2' opacity='0.2'/>
+  </g>
+</svg>`);
+
+// Build dataURL once
+const PLACEHOLDER_DATAURL = `data:image/svg+xml;utf8,${PLACEHOLDER_SVG}`;
+
+// Create 133 placeholders array
+const TOTAL = 133;
+const placeholders = new Array(TOTAL).fill(PLACEHOLDER_DATAURL);
+
+// UI elements
+const uploadInput = document.getElementById('upload');
+const statusEl = document.getElementById('status');
+const galleryEl = document.getElementById('gallery');
+
+// load face-api models from a working CDN hosting models
+async function loadModels() {
+  try{
+    statusEl.textContent = 'Models: loading...';
+    // The `justadudewhohacks` hosted models are in a consistent structure.
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    statusEl.textContent = 'Models: loaded. Upload a photo.';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'Model load failed. Check console.';
+  }
 }
 
-function downloadPhoto(url){
+// simple helper to create a card
+function makeCard(index, dataURL){
+  const card = document.createElement('div');
+  card.className = 'card';
+  const name = `Match ${index+1}`;
+  card.innerHTML = `
+    <img class="avatar" src="${dataURL}" alt="${name}">
+    <div class="label">${name}</div>
+    <div class="big-row">
+      <button class="btn" onclick="downloadData('${dataURL}','photo${index+1}.svg')">Download</button>
+      <button class="btn secondary" onclick="mailtoEdit('${name}')">Request Edit</button>
+    </div>
+  `;
+  return card;
+}
+
+// download dataURL (SVG) helper
+function downloadData(dataURL, filename){
   const a = document.createElement('a');
-  a.href = url;
-  a.download = url.split('/').pop();
+  a.href = dataURL;
+  a.download = filename;
   a.click();
 }
 
-function requestEdit(name){
-  window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=Edit Request&body=Please edit the photo: ${name}`;
+// open mailto
+function mailtoEdit(name){
+  const subj = encodeURIComponent('Photo Edit Request');
+  const body = encodeURIComponent(`Hello Darren,\n\nI would like this photo edited: ${name}\n\nThanks.`);
+  window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subj}&body=${body}`;
 }
 
-// ====== Handle Upload & Match (simplified) ======
-document.getElementById('upload').addEventListener('change', async (event) => {
-  gallery.innerHTML = '';
-  const file = event.target.files[0];
-  const uploadedImg = await faceapi.bufferToImage(file);
-
-  await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
-  await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
-  await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
-
-  const queryDetection = await faceapi.detectSingleFace(uploadedImg).withFaceLandmarks().withFaceDescriptor();
-  if(!queryDetection){
-    alert("No face detected in uploaded photo.");
-    return;
+// when face detected, show all placeholders (simulated matches)
+function showPlaceholders() {
+  galleryEl.innerHTML = '';
+  for(let i=0;i<placeholders.length;i++){
+    galleryEl.appendChild(makeCard(i, placeholders[i]));
   }
+  statusEl.textContent = `Showing ${placeholders.length} matches (placeholders).`;
+}
 
-  // Compare to gallery images
-  const matches = [];
-  for(const url of images){
-    const imgEl = await faceapi.fetchImage(url);
-    const detection = await faceapi.detectSingleFace(imgEl).withFaceLandmarks().withFaceDescriptor();
-    if(detection){
-      const distance = faceapi.euclideanDistance(queryDetection.descriptor, detection.descriptor);
-      if(distance < 0.6){ // adjust threshold
-        matches.push({url, name: url.split('id=')[1]});
-      }
+// upload handling: detect face, then show placeholders
+uploadInput.addEventListener('change', async (ev)=>{
+  const file = ev.target.files && ev.target.files[0];
+  if(!file){ return; }
+  statusEl.textContent = 'Processing upload...';
+
+  // convert uploaded file to image element for detection
+  try{
+    const img = await faceapi.bufferToImage(file);
+    // detect face
+    const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+    if(!det){
+      statusEl.textContent = 'No face detected in uploaded photo. Try another photo.';
+      return;
     }
+    // face detected -> show placeholders as matches
+    showPlaceholders();
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = 'Error processing image. See console.';
   }
-
-  if(matches.length === 0){
-    alert("No matches found.");
-    return;
-  }
-
-  matches.forEach(m => createCard(m.url, m.name));
 });
+
+// Initialize
+loadModels();
 </script>
 </body>
 </html>
