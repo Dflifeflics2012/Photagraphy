@@ -1,197 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Simple Face Match — Placeholder Gallery</title>
+<meta charset="UTF-8">
+<title>Face Match</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- face-api.js -->
-<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2"></script>
 
 <style>
-  :root{
-    --bg:#0d0d0d;
-    --panel:#111;
-    --gold:#d4af37;
-    --silver:#cfcfcf;
-    --white:#ffffff;
-  }
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-  .wrap{max-width:1100px;margin:24px auto;padding:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
-  h1{margin:0 0 10px;font-family: "Orbitron", sans-serif;font-weight:700;color:var(--gold);font-size:28px}
-  p.lead{margin:6px 0 18px;color:var(--silver);font-size:14px}
-  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-  .uploader{
-    display:inline-flex;align-items:center;gap:12px;padding:14px 18px;border-radius:12px;background:linear-gradient(180deg,#151515,#0f0f0f);border:2px solid rgba(255,255,255,0.03);cursor:pointer;
-    box-shadow:0 6px 18px rgba(0,0,0,0.6);
-  }
-  input[type=file]{display:none}
-  .status{font-family: "Orbitron", sans-serif;color:var(--silver);font-size:13px}
-  .note{color:#bbb;font-size:13px;margin-top:6px}
-  #gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:18px}
-  .card{background:linear-gradient(180deg,#111,#0f0f0f);border-radius:12px;padding:12px;text-align:center;border:2px solid rgba(255,255,255,0.03)}
-  .avatar{width:120px;height:120px;display:block;margin:0 auto 8px auto}
-  .label{font-size:13px;color:var(--silver);margin-bottom:8px;word-break:break-word}
-  .big-row{display:flex;gap:8px;justify-content:center}
-  .btn{
-    background:linear-gradient(180deg,var(--gold),#e0b84a);border:none;padding:10px 12px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;
-    box-shadow:0 6px 14px rgba(0,0,0,0.5);
-  }
-  .btn.secondary{background:linear-gradient(180deg,var(--silver),#e6e6e6);color:#111}
-  .btn:active{transform:translateY(1px)}
-  .hidden{display:none}
-  hr{border:0;border-top:1px solid rgba(255,255,255,0.03);margin:16px 0}
-  /* Make icons big and clear on small screens */
-  @media (max-width:520px){
-    .avatar{width:96px;height:96px}
-    .btn{padding:10px 8px;font-size:12px}
-  }
+  body { background:#111; color:white; font-family:Arial; margin:0; padding:20px; }
+  h1 { color:#f5d26b; font-size:28px; margin-bottom:10px; }
+  .btn-upload { padding:14px 20px; background:#222; border:2px solid #f5d26b; border-radius:10px; cursor:pointer; font-weight:bold;}
+  #gallery { margin-top:20px; display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px;}
+  .card { background:#1a1a1a; padding:10px; border-radius:10px; text-align:center; }
+  .card img { width:120px; height:120px; }
+  .btn { padding:8px 12px; margin-top:8px; border-radius:8px; cursor:pointer; border:none; }
+  .download { background:#f5d26b; color:#000; font-weight:bold; }
+  .edit { background:#ddd; color:#000; }
 </style>
+
 </head>
 <body>
-<div class="wrap">
-  <h1>Face Match — Quick</h1>
-  <p class="lead">Upload a photo of the person. If a face is detected, the gallery (placeholders) will display below so you can download or request an edit. (Placeholders are identical silhouettes.)</p>
 
-  <div class="controls">
-    <label class="uploader" id="uploadLabel">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="vertical-align:middle">
-        <path d="M12 3v10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M8 7l4-4 4 4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span style="font-weight:700">Upload photo</span>
-      <input id="upload" type="file" accept="image/*">
-    </label>
+<h1>Face Match</h1>
+<p>Upload a photo → system detects a face → gallery appears.</p>
 
-    <div class="status" id="status">Models: loading…</div>
-  </div>
+<label class="btn-upload">
+  Upload Photo
+  <input type="file" id="upload" accept="image/*" style="display:none;">
+</label>
 
-  <div class="note" id="note">Note: placeholders will be shown after a valid face upload. Replace placeholders with your real photos later to enable true matching.</div>
+<p id="status">Loading models...</p>
 
-  <hr>
-
-  <div id="gallery" aria-live="polite"></div>
-</div>
+<div id="gallery"></div>
 
 <script>
-/*
-  Single-file placeholder gallery with face detection.
-  - 133 identical SVG silhouette images embedded as data URLs
-  - face-api.js used to detect a face in the uploaded photo
-  - when face is detected, we display all placeholders (simulated "matches")
-  - each card includes large Download and Request Edit buttons
-*/
 
-const PLACEHOLDER_SVG = encodeURIComponent(`<?xml version="1.0" encoding="utf-8"?>
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
-  <defs>
-    <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
-      <stop offset='0' stop-color='#e6d6a0'/>
-      <stop offset='1' stop-color='#c6a84a'/>
-    </linearGradient>
-  </defs>
-  <rect width='100%' height='100%' fill='#2a2a2a'/>
-  <g transform='translate(20,20)'>
-    <circle cx='60' cy='40' r='30' fill='url(#g)' />
-    <rect x='20' y='80' width='80' height='60' rx='20' fill='url(#g)'/>
-    <circle cx='60' cy='40' r='30' fill='none' stroke='#000' stroke-width='2' opacity='0.2'/>
-  </g>
-</svg>`);
+// --- 133 placeholder images (simple SVG) ---
+const PLACEHOLDER = encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>
+<rect width='100%' height='100%' fill='#262626'/>
+<circle cx='100' cy='70' r='40' fill='#f5d26b'/>
+<rect x='50' y='120' width='100' height='60' rx='20' fill='#f5d26b'/>
+</svg>
+`);
 
-// Build dataURL once
-const PLACEHOLDER_DATAURL = `data:image/svg+xml;utf8,${PLACEHOLDER_SVG}`;
+const IMAGES = Array.from({length:133}, (_,i)=>`data:image/svg+xml;utf8,${PLACEHOLDER}`);
 
-// Create 133 placeholders array
-const TOTAL = 133;
-const placeholders = new Array(TOTAL).fill(PLACEHOLDER_DATAURL);
+// UI references
+const upload = document.getElementById("upload");
+const statusEl = document.getElementById("status");
+const gallery = document.getElementById("gallery");
 
-// UI elements
-const uploadInput = document.getElementById('upload');
-const statusEl = document.getElementById('status');
-const galleryEl = document.getElementById('gallery');
-
-// load face-api models from a working CDN hosting models
+// Load face detection models
 async function loadModels() {
-  try{
-    statusEl.textContent = 'Models: loading...';
-    // The `justadudewhohacks` hosted models are in a consistent structure.
-    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    statusEl.textContent = 'Models: loaded. Upload a photo.';
-  }catch(err){
-    console.error(err);
-    statusEl.textContent = 'Model load failed. Check console.';
-  }
+    const URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights";
+    await faceapi.nets.tinyFaceDetector.loadFromUri(URL);
+    statusEl.textContent = "Models loaded. Upload an image.";
 }
-
-// simple helper to create a card
-function makeCard(index, dataURL){
-  const card = document.createElement('div');
-  card.className = 'card';
-  const name = `Match ${index+1}`;
-  card.innerHTML = `
-    <img class="avatar" src="${dataURL}" alt="${name}">
-    <div class="label">${name}</div>
-    <div class="big-row">
-      <button class="btn" onclick="downloadData('${dataURL}','photo${index+1}.svg')">Download</button>
-      <button class="btn secondary" onclick="mailtoEdit('${name}')">Request Edit</button>
-    </div>
-  `;
-  return card;
-}
-
-// download dataURL (SVG) helper
-function downloadData(dataURL, filename){
-  const a = document.createElement('a');
-  a.href = dataURL;
-  a.download = filename;
-  a.click();
-}
-
-// open mailto
-function mailtoEdit(name){
-  const subj = encodeURIComponent('Photo Edit Request');
-  const body = encodeURIComponent(`Hello Darren,\n\nI would like this photo edited: ${name}\n\nThanks.`);
-  window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subj}&body=${body}`;
-}
-
-// when face detected, show all placeholders (simulated matches)
-function showPlaceholders() {
-  galleryEl.innerHTML = '';
-  for(let i=0;i<placeholders.length;i++){
-    galleryEl.appendChild(makeCard(i, placeholders[i]));
-  }
-  statusEl.textContent = `Showing ${placeholders.length} matches (placeholders).`;
-}
-
-// upload handling: detect face, then show placeholders
-uploadInput.addEventListener('change', async (ev)=>{
-  const file = ev.target.files && ev.target.files[0];
-  if(!file){ return; }
-  statusEl.textContent = 'Processing upload...';
-
-  // convert uploaded file to image element for detection
-  try{
-    const img = await faceapi.bufferToImage(file);
-    // detect face
-    const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-    if(!det){
-      statusEl.textContent = 'No face detected in uploaded photo. Try another photo.';
-      return;
-    }
-    // face detected -> show placeholders as matches
-    showPlaceholders();
-  }catch(e){
-    console.error(e);
-    statusEl.textContent = 'Error processing image. See console.';
-  }
-});
-
-// Initialize
 loadModels();
+
+// Show all 133 images
+function showGallery() {
+    gallery.innerHTML = "";
+    IMAGES.forEach((src, i)=>{
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <img src="${src}">
+            <div>Match ${i+1}</div>
+            <button class="btn download" onclick="downloadImg('${src}','match${i+1}.svg')">Download</button>
+            <button class="btn edit" onclick="requestEdit(${i+1})">Request Edit</button>
+        `;
+        gallery.appendChild(card);
+    });
+}
+
+// Download button
+function downloadImg(url, filename) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+}
+
+// Email edit button
+function requestEdit(n){
+    const subject = encodeURIComponent("Edit Request");
+    const body = encodeURIComponent(`Please edit Match #${n}`);
+    location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
+}
+
+// Upload handler
+upload.addEventListener("change", async ()=>{
+    const file = upload.files[0];
+    if (!file) return;
+
+    statusEl.textContent = "Detecting face...";
+    const img = await faceapi.bufferToImage(file);
+
+    // Detect a single face
+    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions());
+
+    if (!detection) {
+        statusEl.textContent = "No face detected. Try another photo.";
+        return;
+    }
+
+    statusEl.textContent = "Face detected! Displaying gallery...";
+    showGallery();
+});
 </script>
+
 </body>
 </html>
