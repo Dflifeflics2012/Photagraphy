@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Face Recognition Gallery</title>
+<title>AI Best Photos Selector</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 <style>
@@ -11,24 +11,18 @@ h1 { text-align:center; color:gold; font-size:32px; margin-bottom:20px; }
 #gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-top:20px; }
 .card { background:#1a1a1a; border:2px solid silver; border-radius:12px; padding:8px; text-align:center; cursor:pointer; transition:0.2s; }
 .card img { width:100%; height:180px; object-fit:cover; border-radius:8px; }
-.card.match { border:3px solid red; }
-.card.selected { box-shadow:0 0 10px 3px gold; }
-button { margin:10px; padding:12px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; background: gold; color:#000; }
-input[type=file] { margin:10px; }
+.card.best { border:3px solid red; box-shadow:0 0 10px 3px gold; }
+button { margin:10px; padding:12px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; background: gold; color:#000; font-size:16px; }
 </style>
 </head>
 <body>
 
-<h1>Face Recognition Gallery</h1>
-
-<input type="file" id="inputImage" accept="image/*">
-<button onclick="runRecognition()">Find Matches</button>
+<h1>AI Best Photos Selector</h1>
 
 <div id="gallery">Loading photos…</div>
 
 <div style="text-align:center; margin-top:20px;">
-    <button onclick="downloadSelected()">Download Selected</button>
-    <button onclick="requestEditSelected()">Request Edit</button>
+    <button onclick="downloadSelected()">Download Best Photos</button>
 </div>
 
 <script>
@@ -39,15 +33,13 @@ const DRIVE_LIST_URL = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID
 let galleryCards = [];
 let selectedPhotos = [];
 
-// Load gallery images from Drive
+// Load images from Drive
 async function loadGallery() {
     const gallery = document.getElementById("gallery");
+    gallery.innerHTML = "";
     try {
         const resp = await fetch(DRIVE_LIST_URL);
         const data = await resp.json();
-        gallery.innerHTML = "";
-        galleryCards = [];
-
         if (!data.files || data.files.length === 0) {
             gallery.innerHTML = "<p>No images found.</p>";
             return;
@@ -65,26 +57,31 @@ async function loadGallery() {
                 galleryCards.push(card);
             }
         }
+
+        // Once gallery loaded, run AI selection
+        await loadModels();
+        await selectBestPhotos();
+
     } catch(e) {
         gallery.innerHTML = "<p>Error loading images.</p>";
         console.error(e);
     }
 }
 
-// Toggle selection of a card
+// Toggle selection manually
 function toggleSelect(card) {
     if (selectedPhotos.includes(card)) {
         selectedPhotos = selectedPhotos.filter(c => c !== card);
-        card.classList.remove("selected");
+        card.classList.remove("best");
     } else {
         selectedPhotos.push(card);
-        card.classList.add("selected");
+        card.classList.add("best");
     }
 }
 
 // Download selected photos
 function downloadSelected() {
-    if (selectedPhotos.length === 0) { alert("Select photos first."); return; }
+    if (selectedPhotos.length === 0) { alert("No photos selected."); return; }
     selectedPhotos.forEach(card => {
         const a = document.createElement("a");
         a.href = card.dataset.url;
@@ -93,45 +90,41 @@ function downloadSelected() {
     });
 }
 
-// Request edit via email
-function requestEditSelected() {
-    if (selectedPhotos.length === 0) { alert("Select photos first."); return; }
-    const names = selectedPhotos.map(c => c.dataset.name).join(", ");
-    const subject = encodeURIComponent("Edit Request");
-    const body = encodeURIComponent(`Please edit the following photos: ${names}`);
-    window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
-}
-
 // Load face-api models
 async function loadModels() {
     await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
-    await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
-    await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
 }
 
-// Run face recognition
-async function runRecognition() {
-    const input = document.getElementById("inputImage");
-    if (!input.files[0]) return alert("Select an image first.");
+// AI selects best photos
+async function selectBestPhotos() {
+    const promises = galleryCards.map(async card => {
+        const img = await faceapi.fetchImage(card.dataset.url);
+        const detections = await faceapi.detectAllFaces(img);
+        if (detections.length > 0) {
+            // Score by largest face area
+            const largestFace = detections.reduce((max, det) => {
+                const area = det.box.width * det.box.height;
+                return area > max ? area : max;
+            }, 0);
+            return {card, score: largestFace};
+        } else return {card, score:0};
+    });
 
-    const queryImg = await faceapi.bufferToImage(input.files[0]);
-    const queryDesc = await faceapi.computeFaceDescriptor(queryImg);
-
-    // Clear previous matches
-    galleryCards.forEach(card => card.classList.remove("match"));
-
-    for (const card of galleryCards) {
-        const galleryImg = await faceapi.fetchImage(card.dataset.url);
-        const desc = await faceapi.computeFaceDescriptor(galleryImg);
-        const distance = faceapi.euclideanDistance(queryDesc, desc);
-        if (distance < 0.6) card.classList.add("match"); // Highlight match
+    const results = await Promise.all(promises);
+    // Select top 20% best photos automatically
+    results.sort((a,b) => b.score - a.score);
+    const topCount = Math.ceil(results.length * 0.2);
+    for (let i = 0; i < topCount; i++) {
+        const card = results[i].card;
+        card.classList.add("best");
+        if (!selectedPhotos.includes(card)) selectedPhotos.push(card);
     }
 
-    alert("Matching photos highlighted in red. Click to select for download or edit.");
+    alert(`AI selected top ${topCount} best photos (red border). Click any to deselect.`);
 }
 
 // Initialize
-loadModels().then(loadGallery);
+loadGallery();
 </script>
 
 </body>
