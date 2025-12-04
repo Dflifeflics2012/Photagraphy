@@ -1,31 +1,32 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Drive Photo Gallery</title>
+<title>Face Recognition Gallery</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 <style>
-body { font-family: Arial; background: #111; color: #fff; padding: 20px; }
-h1 { text-align: center; color: gold; font-size: 32px; margin-bottom: 20px; }
-#gallery { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 16px; }
-.card { background: #1a1a1a; border: 2px solid silver; border-radius: 12px; padding: 8px; text-align:center; cursor:pointer; }
-.card img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
-.card.selected { border: 3px solid red; }
-.buttons { text-align:center; margin-top:20px; }
-button { margin:5px; padding:10px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
-.download { background: gold; color:#000; }
-.edit { background: silver; color:#000; }
+body { font-family: Arial; background:#111; color:#fff; padding:20px; }
+h1 { text-align:center; color:gold; font-size:32px; margin-bottom:20px; }
+#gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-top:20px; }
+.card { background:#1a1a1a; border:2px solid silver; border-radius:12px; padding:8px; text-align:center; cursor:pointer; }
+.card img { width:100%; height:180px; object-fit:cover; border-radius:8px; }
+.card.match { border:3px solid red; }
+button { margin:10px; padding:12px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; background: gold; color:#000; }
 </style>
 </head>
 <body>
 
-<h1>Drive Photo Gallery</h1>
+<h1>Face Recognition Gallery</h1>
+
+<input type="file" id="inputImage" accept="image/*">
+<button onclick="runRecognition()">Find Matches</button>
 
 <div id="gallery">Loading photos…</div>
 
-<div class="buttons">
-    <button class="download" onclick="downloadSelected()">Download Selected</button>
-    <button class="edit" onclick="requestEditSelected()">Request Edit for Selected</button>
+<div style="text-align:center; margin-top:20px;">
+    <button onclick="downloadSelected()">Download Selected</button>
+    <button onclick="requestEditSelected()">Request Edit</button>
 </div>
 
 <script>
@@ -33,50 +34,55 @@ const FOLDER_ID = "1HIQ3Fely-ba9pu6Wu8pwa5j6MRhv5pTz";
 const API_KEY = "AIzaSyDSwn6ozeqbR_Pn3Qc5B3iiwxsf3DosVYw";
 const DRIVE_LIST_URL = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
 
+let galleryCards = [];
 let selectedPhotos = [];
 
+// Load gallery images from Drive
 async function loadGallery() {
     const gallery = document.getElementById("gallery");
     try {
         const resp = await fetch(DRIVE_LIST_URL);
         const data = await resp.json();
         gallery.innerHTML = "";
+        galleryCards = [];
 
         if (!data.files || data.files.length === 0) {
-            gallery.innerHTML = "<p>No images found in this folder.</p>";
+            gallery.innerHTML = "<p>No images found.</p>";
             return;
         }
 
-        data.files.forEach(file => {
+        for (const file of data.files) {
             if (file.mimeType.startsWith("image/")) {
                 const card = document.createElement("div");
                 card.className = "card";
-                const link = `https://drive.google.com/uc?export=view&id=${file.id}`;
                 card.dataset.name = file.name;
-                card.dataset.url = link;
-                card.innerHTML = `<img src="${link}" alt="${file.name}"><div>${file.name}</div>`;
-
+                card.dataset.url = `https://drive.google.com/uc?export=view&id=${file.id}`;
+                card.innerHTML = `<img src="${card.dataset.url}" alt="${file.name}"><div>${file.name}</div>`;
                 card.addEventListener("click", () => toggleSelect(card));
                 gallery.appendChild(card);
+                galleryCards.push(card);
             }
-        });
+        }
     } catch(e) {
-        gallery.innerHTML = "<p>Error loading images. Check console.</p>";
+        gallery.innerHTML = "<p>Error loading images.</p>";
         console.error(e);
     }
 }
 
+// Toggle selection of a card
 function toggleSelect(card) {
     if (selectedPhotos.includes(card)) {
         selectedPhotos = selectedPhotos.filter(c => c !== card);
-        card.classList.remove("selected");
+        card.classList.remove("match");
     } else {
         selectedPhotos.push(card);
-        card.classList.add("selected");
+        card.classList.add("match");
     }
 }
 
+// Download selected photos
 function downloadSelected() {
+    if (selectedPhotos.length === 0) { alert("Select photos first."); return; }
     selectedPhotos.forEach(card => {
         const a = document.createElement("a");
         a.href = card.dataset.url;
@@ -85,18 +91,44 @@ function downloadSelected() {
     });
 }
 
+// Request edit via email
 function requestEditSelected() {
-    if (selectedPhotos.length === 0) {
-        alert("Please select photos first.");
-        return;
-    }
+    if (selectedPhotos.length === 0) { alert("Select photos first."); return; }
     const names = selectedPhotos.map(c => c.dataset.name).join(", ");
     const subject = encodeURIComponent("Edit Request");
     const body = encodeURIComponent(`Please edit the following photos: ${names}`);
     window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
 }
 
-loadGallery();
+// Load face-api models
+async function loadModels() {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
+    await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/weights/');
+}
+
+// Run face recognition
+async function runRecognition() {
+    const input = document.getElementById("inputImage");
+    if (!input.files[0]) return alert("Select an image first.");
+    const queryImg = await faceapi.bufferToImage(input.files[0]);
+    const queryDesc = await faceapi.computeFaceDescriptor(queryImg);
+
+    // Clear previous matches
+    galleryCards.forEach(card => card.classList.remove("match"));
+
+    for (const card of galleryCards) {
+        const galleryImg = await faceapi.fetchImage(card.dataset.url);
+        const desc = await faceapi.computeFaceDescriptor(galleryImg);
+        const distance = faceapi.euclideanDistance(queryDesc, desc);
+        if (distance < 0.6) card.classList.add("match"); // Highlight match
+    }
+
+    alert("Matching photos highlighted in red. Click to select and download or request edit.");
+}
+
+// Initialize
+loadModels().then(loadGallery);
 </script>
 
 </body>
