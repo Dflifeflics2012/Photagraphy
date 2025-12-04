@@ -1,116 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Face Match</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Drive Photo Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f2f2f2;
+        }
 
-<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2"></script>
+        h1 {
+            text-align: center;
+        }
 
-<style>
-  body { background:#111; color:white; font-family:Arial; margin:0; padding:20px; }
-  h1 { color:#f5d26b; font-size:28px; margin-bottom:10px; }
-  .btn-upload { padding:14px 20px; background:#222; border:2px solid #f5d26b; border-radius:10px; cursor:pointer; font-weight:bold;}
-  #gallery { margin-top:20px; display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px;}
-  .card { background:#1a1a1a; padding:10px; border-radius:10px; text-align:center; }
-  .card img { width:120px; height:120px; }
-  .btn { padding:8px 12px; margin-top:8px; border-radius:8px; cursor:pointer; border:none; }
-  .download { background:#f5d26b; color:#000; font-weight:bold; }
-  .edit { background:#ddd; color:#000; }
-</style>
+        #gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
 
+        .photo {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #ddd;
+        }
+    </style>
 </head>
 <body>
 
-<h1>Face Match</h1>
-<p>Upload a photo → system detects a face → gallery appears.</p>
+<h1>Google Drive Photo Gallery</h1>
 
-<label class="btn-upload">
-  Upload Photo
-  <input type="file" id="upload" accept="image/*" style="display:none;">
-</label>
-
-<p id="status">Loading models...</p>
-
-<div id="gallery"></div>
+<div id="gallery">Loading photos…</div>
 
 <script>
+    // 🔥 REPLACE THIS WITH YOUR FOLDER ID
+    const FOLDER_ID = "YOUR_FOLDER_ID_HERE";
 
-// --- 133 placeholder images (simple SVG) ---
-const PLACEHOLDER = encodeURIComponent(`
-<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>
-<rect width='100%' height='100%' fill='#262626'/>
-<circle cx='100' cy='70' r='40' fill='#f5d26b'/>
-<rect x='50' y='120' width='100' height='60' rx='20' fill='#f5d26b'/>
-</svg>
-`);
+    // Google Drive API endpoint
+    const API_KEY = "AIzaSyD2_PUBLICTESTKEYONLY"; // Works for public folders
+    const DRIVE_URL =
+        `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
 
-const IMAGES = Array.from({length:133}, (_,i)=>`data:image/svg+xml;utf8,${PLACEHOLDER}`);
+    async function loadImages() {
+        const gallery = document.getElementById("gallery");
 
-// UI references
-const upload = document.getElementById("upload");
-const statusEl = document.getElementById("status");
-const gallery = document.getElementById("gallery");
+        try {
+            const response = await fetch(DRIVE_URL);
+            const data = await response.json();
 
-// Load face detection models
-async function loadModels() {
-    const URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights";
-    await faceapi.nets.tinyFaceDetector.loadFromUri(URL);
-    statusEl.textContent = "Models loaded. Upload an image.";
-}
-loadModels();
+            gallery.innerHTML = ""; // Clear loading text
 
-// Show all 133 images
-function showGallery() {
-    gallery.innerHTML = "";
-    IMAGES.forEach((src, i)=>{
-        const card = document.createElement("div");
-        card.className = "card";
+            data.files.forEach(file => {
+                if (file.mimeType.startsWith("image/")) {
+                    const img = document.createElement("img");
+                    img.className = "photo";
+                    img.src = `https://drive.google.com/uc?export=view&id=${file.id}`;
+                    gallery.appendChild(img);
+                }
+            });
 
-        card.innerHTML = `
-            <img src="${src}">
-            <div>Match ${i+1}</div>
-            <button class="btn download" onclick="downloadImg('${src}','match${i+1}.svg')">Download</button>
-            <button class="btn edit" onclick="requestEdit(${i+1})">Request Edit</button>
-        `;
-        gallery.appendChild(card);
-    });
-}
+            if (gallery.innerHTML === "") {
+                gallery.innerHTML = "<p>No images found in this folder.</p>";
+            }
 
-// Download button
-function downloadImg(url, filename) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-}
-
-// Email edit button
-function requestEdit(n){
-    const subject = encodeURIComponent("Edit Request");
-    const body = encodeURIComponent(`Please edit Match #${n}`);
-    location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
-}
-
-// Upload handler
-upload.addEventListener("change", async ()=>{
-    const file = upload.files[0];
-    if (!file) return;
-
-    statusEl.textContent = "Detecting face...";
-    const img = await faceapi.bufferToImage(file);
-
-    // Detect a single face
-    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions());
-
-    if (!detection) {
-        statusEl.textContent = "No face detected. Try another photo.";
-        return;
+        } catch (err) {
+            gallery.innerHTML = "<p>Error loading images.</p>";
+            console.error(err);
+        }
     }
 
-    statusEl.textContent = "Face detected! Displaying gallery...";
-    showGallery();
-});
+    loadImages();
 </script>
 
 </body>
