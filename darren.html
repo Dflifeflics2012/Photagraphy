@@ -1,78 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Drive Photo Gallery</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background: #f2f2f2;
-        }
-
-        h1 {
-            text-align: center;
-        }
-
-        #gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .photo {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-radius: 8px;
-            background: #ddd;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Drive Photo Gallery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: Arial; background: #111; color: #fff; padding: 20px; }
+h1 { text-align: center; color: gold; font-size: 32px; margin-bottom: 20px; }
+#gallery { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 16px; }
+.card { background: #1a1a1a; border: 2px solid silver; border-radius: 12px; padding: 8px; text-align:center; }
+.card img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
+.card button { margin-top: 8px; padding: 8px 12px; border: none; border-radius: 8px; cursor:pointer; font-weight:bold; }
+.download { background: gold; color:#000; }
+.edit { background: silver; color:#000; }
+</style>
 </head>
 <body>
 
-<h1>Google Drive Photo Gallery</h1>
-
-<div id="gallery">Loading photos…</div>
+<h1>Drive Photo Gallery</h1>
+<div id="gallery">Loading photos...</div>
 
 <script>
-    // 🔥 REPLACE THIS WITH YOUR FOLDER ID
-    const FOLDER_ID = "YOUR_FOLDER_ID_HERE";
+const FOLDER_ID = "1HIQ3Fely-ba9pu6Wu8pwa5j6MRhv5pTz";
+const API_KEY = "AIzaSyDSwn6ozeqbR_Pn3Qc5B3iiwxsf3DosVYw";
 
-    // Google Drive API endpoint
-    const API_KEY = "AIzaSyD2_PUBLICTESTKEYONLY"; // Works for public folders
-    const DRIVE_URL =
-        `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
+const DRIVE_LIST_URL = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
 
-    async function loadImages() {
-        const gallery = document.getElementById("gallery");
+async function loadGallery() {
+    const gallery = document.getElementById("gallery");
+    try {
+        const resp = await fetch(DRIVE_LIST_URL);
+        const data = await resp.json();
+        gallery.innerHTML = "";
 
-        try {
-            const response = await fetch(DRIVE_URL);
-            const data = await response.json();
-
-            gallery.innerHTML = ""; // Clear loading text
-
-            data.files.forEach(file => {
-                if (file.mimeType.startsWith("image/")) {
-                    const img = document.createElement("img");
-                    img.className = "photo";
-                    img.src = `https://drive.google.com/uc?export=view&id=${file.id}`;
-                    gallery.appendChild(img);
-                }
-            });
-
-            if (gallery.innerHTML === "") {
-                gallery.innerHTML = "<p>No images found in this folder.</p>";
-            }
-
-        } catch (err) {
-            gallery.innerHTML = "<p>Error loading images.</p>";
-            console.error(err);
+        if (!data.files || data.files.length === 0) {
+            gallery.innerHTML = "<p>No images found in this folder.</p>";
+            return;
         }
-    }
 
-    loadImages();
+        data.files.forEach(file => {
+            if (file.mimeType.startsWith("image/")) {
+                const card = document.createElement("div");
+                card.className = "card";
+                const link = `https://drive.google.com/uc?export=view&id=${file.id}`;
+                card.innerHTML = `
+                    <img src="${link}" alt="${file.name}">
+                    <div>${file.name}</div>
+                    <button class="download" onclick="downloadImg('${link}','${file.name}')">Download</button>
+                    <button class="edit" onclick="requestEdit('${file.name}')">Request Edit</button>
+                `;
+                gallery.appendChild(card);
+            }
+        });
+    } catch(e) {
+        gallery.innerHTML = "<p>Error loading images. Check console.</p>";
+        console.error(e);
+    }
+}
+
+function downloadImg(url, filename) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+}
+
+function requestEdit(name){
+    const subject = encodeURIComponent("Edit Request");
+    const body = encodeURIComponent(`Please edit this photo: ${name}`);
+    location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
+}
+
+loadGallery();
 </script>
 
 </body>
