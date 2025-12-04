@@ -8,9 +8,11 @@
 body { font-family: Arial; background: #111; color: #fff; padding: 20px; }
 h1 { text-align: center; color: gold; font-size: 32px; margin-bottom: 20px; }
 #gallery { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 16px; }
-.card { background: #1a1a1a; border: 2px solid silver; border-radius: 12px; padding: 8px; text-align:center; }
+.card { background: #1a1a1a; border: 2px solid silver; border-radius: 12px; padding: 8px; text-align:center; cursor:pointer; }
 .card img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
-.card button { margin-top: 8px; padding: 8px 12px; border: none; border-radius: 8px; cursor:pointer; font-weight:bold; }
+.card.selected { border: 3px solid red; }
+.buttons { text-align:center; margin-top:20px; }
+button { margin:5px; padding:10px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
 .download { background: gold; color:#000; }
 .edit { background: silver; color:#000; }
 </style>
@@ -18,13 +20,20 @@ h1 { text-align: center; color: gold; font-size: 32px; margin-bottom: 20px; }
 <body>
 
 <h1>Drive Photo Gallery</h1>
-<div id="gallery">Loading photos...</div>
+
+<div id="gallery">Loading photos…</div>
+
+<div class="buttons">
+    <button class="download" onclick="downloadSelected()">Download Selected</button>
+    <button class="edit" onclick="requestEditSelected()">Request Edit for Selected</button>
+</div>
 
 <script>
 const FOLDER_ID = "1HIQ3Fely-ba9pu6Wu8pwa5j6MRhv5pTz";
 const API_KEY = "AIzaSyDSwn6ozeqbR_Pn3Qc5B3iiwxsf3DosVYw";
-
 const DRIVE_LIST_URL = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
+
+let selectedPhotos = [];
 
 async function loadGallery() {
     const gallery = document.getElementById("gallery");
@@ -43,12 +52,11 @@ async function loadGallery() {
                 const card = document.createElement("div");
                 card.className = "card";
                 const link = `https://drive.google.com/uc?export=view&id=${file.id}`;
-                card.innerHTML = `
-                    <img src="${link}" alt="${file.name}">
-                    <div>${file.name}</div>
-                    <button class="download" onclick="downloadImg('${link}','${file.name}')">Download</button>
-                    <button class="edit" onclick="requestEdit('${file.name}')">Request Edit</button>
-                `;
+                card.dataset.name = file.name;
+                card.dataset.url = link;
+                card.innerHTML = `<img src="${link}" alt="${file.name}"><div>${file.name}</div>`;
+
+                card.addEventListener("click", () => toggleSelect(card));
                 gallery.appendChild(card);
             }
         });
@@ -58,17 +66,34 @@ async function loadGallery() {
     }
 }
 
-function downloadImg(url, filename) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
+function toggleSelect(card) {
+    if (selectedPhotos.includes(card)) {
+        selectedPhotos = selectedPhotos.filter(c => c !== card);
+        card.classList.remove("selected");
+    } else {
+        selectedPhotos.push(card);
+        card.classList.add("selected");
+    }
 }
 
-function requestEdit(name){
+function downloadSelected() {
+    selectedPhotos.forEach(card => {
+        const a = document.createElement("a");
+        a.href = card.dataset.url;
+        a.download = card.dataset.name;
+        a.click();
+    });
+}
+
+function requestEditSelected() {
+    if (selectedPhotos.length === 0) {
+        alert("Please select photos first.");
+        return;
+    }
+    const names = selectedPhotos.map(c => c.dataset.name).join(", ");
     const subject = encodeURIComponent("Edit Request");
-    const body = encodeURIComponent(`Please edit this photo: ${name}`);
-    location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
+    const body = encodeURIComponent(`Please edit the following photos: ${names}`);
+    window.location.href = `mailto:Darren.feldman@armyandnavyacademy.org?subject=${subject}&body=${body}`;
 }
 
 loadGallery();
